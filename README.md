@@ -1,6 +1,10 @@
 # apollo-datasource-mongoose
 
-Apollo datasource for mongoose
+---
+
+![CI](https://github.com/madman-labs/apollo-datasource-mongoose/actions/workflows/ci.yml/badge.svg?branch=main)
+
+---
 
 > :warning: **I just started this project.** It's still in early developmen phase
 
