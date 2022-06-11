@@ -12,12 +12,25 @@ jobs:
         steps:
             -   name: Checkout
                 uses: actions/checkout@v3
+
             -   name: Setup node
                 uses: actions/setup-node@v3
                 with:
                     node-version: ${{ matrix.node }}
                     cache: 'npm'
+
             -   name: Install
                 run: npm install
+
+            -   name: Start MongoDB
+                uses: supercharge/mongodb-github-action@1.7.0
+                with:
+                    mongodb-version: '5'
+                    mongodb-username: 'root'
+                    mongodb-password: 'example'
+                    mongodb-db: 'testing'
+
             -   name: Test
                 run: npm test
+                env:
+                    MONGO_URL: 'mongodb://root:example@localhost:27017/testing?authSource=admin'

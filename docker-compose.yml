@@ -7,7 +7,7 @@ services:
             - .:/app
         tty: true
         environment:
-            MONGO_URL: 'mongodb://root:example@mongo:27017/api?authSource=admin'
+            MONGO_URL: 'mongodb://root:example@mongo:27017/testing?authSource=admin'
     mongo:
         image: mongo
         restart: always
