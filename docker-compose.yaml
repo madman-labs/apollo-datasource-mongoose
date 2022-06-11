@@ -6,3 +6,13 @@ services:
         volumes:
             - .:/app
         tty: true
+        environment:
+            MONGO_URL: 'mongodb://root:example@mongo:27017/api?authSource=admin'
+    mongo:
+        image: mongo
+        restart: always
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: root
+            MONGO_INITDB_ROOT_PASSWORD: example
+        expose:
+            - 27017

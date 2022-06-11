@@ -1,16 +1,23 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MongooseDataSource = void 0;
 const apollo_datasource_1 = require("apollo-datasource");
-const mongoose_1 = require("mongoose");
+const mongoose_1 = __importDefault(require("mongoose"));
 const apollo_server_caching_1 = require("apollo-server-caching");
 const apollo_server_errors_1 = require("apollo-server-errors");
 class MongooseDataSource extends apollo_datasource_1.DataSource {
     constructor(model, options = {}) {
         super();
         this.options = {};
-        if (false === (typeof model === 'object' && model.prototype instanceof mongoose_1.Model)) {
-            throw new apollo_server_errors_1.ApolloError('You have to pass mongoose model in the constructor');
+        if (typeof model !== 'function') {
+            const type = typeof model;
+            throw new apollo_server_errors_1.ApolloError(`You have to pass function as model in the constructor. ${type} passed.`);
+        }
+        if (model instanceof mongoose_1.default.Model) {
+            throw new apollo_server_errors_1.ApolloError(`You have to pass mongoose model in the constructor.`);
         }
         this.model = model;
         this.options = options;
@@ -27,7 +34,7 @@ class MongooseDataSource extends apollo_datasource_1.DataSource {
         }
         return find.exec();
     }
-    find(filters, page = 1, onPage = 10, sort = undefined) {
+    find(filters = {}, page = 1, onPage = 10, sort = undefined) {
         if (!Number.isInteger(page)) {
             throw new apollo_server_errors_1.ApolloError('page parameter must be an integer');
         }
@@ -49,7 +56,7 @@ class MongooseDataSource extends apollo_datasource_1.DataSource {
         if (this.options.populate !== undefined) {
             find.populate(this.options.populate);
         }
-        return this.model.find(filters).exec();
+        return find.exec();
     }
 }
 exports.MongooseDataSource = MongooseDataSource;
