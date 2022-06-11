@@ -1,7 +1,5 @@
 # apollo-datasource-mongoose
 
----
-
 ![CI](https://github.com/madman-labs/apollo-datasource-mongoose/actions/workflows/ci.yml/badge.svg?branch=main)
 
 ---
@@ -20,14 +18,14 @@
 ## Installation
 
 ```
-npm install apollo-datasource-mongoose
+npm install @madmanlabs/apollo-datasource-mongoose
 ```
 
 ## Usage
 
 ```
 import mongoose, {Schema} from 'mongoose';
-import {MongooseDataSource} from 'apollo-datasource-mongoose';
+import {MongooseDataSource} from '@madmanlabs/apollo-datasource-mongoose';
 
 interface CatInterface {
     name: string;
@@ -48,7 +46,7 @@ Creating your own data source using inheritance:
 
 ```
 import mongoose, {Schema} from 'mongoose';
-import {MongooseDataSource} from 'apollo-datasource-mongoose';
+import {MongooseDataSource} from '@madmanlabs/apollo-datasource-mongoose';
 
 interface CatInterface {
     name: string;
