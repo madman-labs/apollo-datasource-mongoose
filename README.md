@@ -19,14 +19,14 @@
 ## Installation
 
 ```
-npm install @madmanlabs/apollo-datasource-mongoose
+npm install @dariuszp/apollo-datasource-mongoose
 ```
 
 ## Usage
 
 ```
 import mongoose, {Schema} from 'mongoose';
-import {MongooseDataSource} from '@madmanlabs/apollo-datasource-mongoose';
+import {MongooseDataSource} from '@dariuszp/apollo-datasource-mongoose';
 
 interface CatInterface {
     name: string;
@@ -47,7 +47,7 @@ Creating your own data source using inheritance:
 
 ```
 import mongoose, {Schema} from 'mongoose';
-import {MongooseDataSource} from '@madmanlabs/apollo-datasource-mongoose';
+import {MongooseDataSource} from '@dariuszp/apollo-datasource-mongoose';
 
 interface CatInterface {
     name: string;
@@ -76,7 +76,7 @@ Following previous example, you can take advantage of implemented cache. Right n
 
 ```
 import mongoose, {Schema} from 'mongoose';
-import {MongooseDataSource} from '@madmanlabs/apollo-datasource-mongoose';
+import {MongooseDataSource} from '@dariuszp/apollo-datasource-mongoose';
 import {InMemoryLRUCache} from "apollo-server-caching";
 
 interface CatInterface {
