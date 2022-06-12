@@ -8,7 +8,7 @@
 
 ## TODO
 
-- [x] .find() and .findById() with basic parameters
+- [x] .find() and .findById() with basic parametersgit p
 - [x] auto population of the fields
 - [x] Basic tests using active mongodb
 - [ ] Mocking mongodb in tests so I can drop dependency on mongodb database
