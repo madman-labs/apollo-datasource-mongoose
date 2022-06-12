@@ -1,6 +1,6 @@
 {
   "name": "@dariuszp/apollo-datasource-mongoose",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "author": "Dariusz Półtorak <poltorak.dariusz@madmanlabs.com>",
   "license": "MIT",
   "repository": {
