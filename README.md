@@ -72,4 +72,35 @@ export const dataSources = () => {
 
 ## Cache
 
-Following previous example, you can take advantage of implemented cache. Right now I'm simply 
+Following previous example, you can take advantage of implemented cache. Right now I'm simply caching queries without tracking individual documents. There is a plan of using mongoose hooks to track changes in individual documents but I would be against that in distributed systems unless you implement global cache.
+
+```
+import mongoose, {Schema} from 'mongoose';
+import {MongooseDataSource} from '@madmanlabs/apollo-datasource-mongoose';
+import {InMemoryLRUCache} from "apollo-server-caching";
+
+interface CatInterface {
+    name: string;
+}
+
+const Cat = mongoose.model<CatInterface>('Cat', new Schema<CatInterface>({
+    name: { type: "String" }
+}));
+
+class CatDataSource extends MongooseDataSource<CatInterface> {
+    findByName(name: string) {
+        return this.model.find({ name });
+    }
+}
+
+export const dataSources = () => {
+    return {
+        cats: new CatDataSource(Cat, {
+            cache: new InMemoryLRUCache(),
+            cacheOptions: {
+                ttl: 5 // Cache queries for 5s
+            }
+        }),
+    };
+};
+```
