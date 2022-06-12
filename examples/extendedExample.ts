@@ -11,7 +11,7 @@ const Cat = mongoose.model<CatInterface>('Cat', new Schema<CatInterface>({
 
 class CatDataSource extends MongooseDataSource<CatInterface> {
     findByName(name: string) {
-        return this.model.find({ name });
+        return this.find({ name });
     }
 }
 

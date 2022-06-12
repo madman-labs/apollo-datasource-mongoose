@@ -1,13 +1,13 @@
-import {DataSource, DataSourceConfig} from "apollo-datasource";
+import {DataSource} from "apollo-datasource";
 import type {FilterQuery, ObjectId, QueryWithHelpers, SortOrder} from 'mongoose';
 import mongoose, {Model} from 'mongoose';
 import type {KeyValueCache} from "apollo-server-caching";
 import {ApolloError} from "apollo-server-errors";
 import type {KeyValueCacheSetOptions} from "apollo-server-caching/src/KeyValueCache";
 
-export interface MongooseDataSourceOptionsInterface {
+export interface MongooseDataSourceOptionsInterface<T> {
     populate?: string | string[];
-    cache?: KeyValueCache
+    cache?: KeyValueCache<T | T[] | undefined>
     cacheOptions?: KeyValueCacheSetOptions
 }
 
@@ -15,14 +15,14 @@ export class MongooseDataSource<T, ContextInterface = {}> extends DataSource<Con
 
     protected model: Model<T>;
 
-    protected options: MongooseDataSourceOptionsInterface = {};
+    protected options: MongooseDataSourceOptionsInterface<T> = {};
 
     protected context?: ContextInterface;
 
-    protected keyValueCache?: KeyValueCache;
+    protected keyValueCache?: KeyValueCache<T | T[] | undefined>;
     protected keyValueCacheOptions;
 
-    constructor(model: Model<T>, options: MongooseDataSourceOptionsInterface = {}) {
+    constructor(model: Model<T>, options: MongooseDataSourceOptionsInterface<T> = {}) {
         super();
 
         if (typeof model !== 'function') {
@@ -40,7 +40,7 @@ export class MongooseDataSource<T, ContextInterface = {}> extends DataSource<Con
         this.keyValueCacheOptions = options.cacheOptions || {};
     }
 
-    private cache(query: QueryWithHelpers<any, T>, options?: KeyValueCacheSetOptions): Promise<any> {
+    protected cache(query: QueryWithHelpers<any, T>, options?: KeyValueCacheSetOptions): Promise<any> {
         if (!this.keyValueCache) {
             return query.exec();
         }
@@ -69,9 +69,9 @@ export class MongooseDataSource<T, ContextInterface = {}> extends DataSource<Con
         });
     }
 
-    override initialize(config: DataSourceConfig<ContextInterface>): void | Promise<void> {
+    override initialize(config: { context: ContextInterface; cache: KeyValueCache<any>; }): void | Promise<void> {
         this.context = config.context;
-        this.keyValueCache = config.cache;
+        this.keyValueCache = config.cache as KeyValueCache<T | T[] | undefined>;
     }
 
     findById(objectId: ObjectId | string): Promise<T | null> {
