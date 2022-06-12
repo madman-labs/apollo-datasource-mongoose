@@ -1,12 +1,14 @@
 import {DataSource, DataSourceConfig} from "apollo-datasource";
-import type {FilterQuery, ObjectId, SortOrder} from 'mongoose';
+import type {FilterQuery, ObjectId, QueryWithHelpers, SortOrder} from 'mongoose';
 import mongoose, {Model} from 'mongoose';
 import type {KeyValueCache} from "apollo-server-caching";
-import {InMemoryLRUCache} from "apollo-server-caching";
 import {ApolloError} from "apollo-server-errors";
+import type {KeyValueCacheSetOptions} from "apollo-server-caching/src/KeyValueCache";
 
 export interface MongooseDataSourceOptionsInterface {
     populate?: string | string[];
+    cache?: KeyValueCache
+    cacheOptions?: KeyValueCacheSetOptions
 }
 
 export class MongooseDataSource<T, ContextInterface = {}> extends DataSource<ContextInterface> {
@@ -17,7 +19,8 @@ export class MongooseDataSource<T, ContextInterface = {}> extends DataSource<Con
 
     protected context?: ContextInterface;
 
-    protected cache: KeyValueCache;
+    protected keyValueCache?: KeyValueCache;
+    protected keyValueCacheOptions;
 
     constructor(model: Model<T>, options: MongooseDataSourceOptionsInterface = {}) {
         super();
@@ -33,12 +36,42 @@ export class MongooseDataSource<T, ContextInterface = {}> extends DataSource<Con
 
         this.model = model;
         this.options = options;
-        this.cache = new InMemoryLRUCache();
+        this.keyValueCache = options.cache;
+        this.keyValueCacheOptions = options.cacheOptions || {};
+    }
+
+    private cache(query: QueryWithHelpers<any, T>, options?: KeyValueCacheSetOptions): Promise<any> {
+        if (!this.keyValueCache) {
+            return query.exec();
+        }
+
+        const key = JSON.stringify({
+            model: query.model.modelName,
+            populated: query.getPopulatedPaths().join(','), // undocumented
+            query: (query as any)._conditions, // undocumented
+            fields: (query as any)._fields, // undocumented
+            options: (query as any).options, // undocumented
+        });
+
+        return new Promise(async (resolve, reject) => {
+            try {
+                const cacheValue = await this.keyValueCache!.get(key);
+                if (cacheValue) {
+                    resolve(cacheValue);
+                } else {
+                    const result = await query.exec();
+                    await this.keyValueCache!.set(key, result, options ?? this.keyValueCacheOptions);
+                    resolve(result);
+                }
+            } catch (e) {
+                reject(e);
+            }
+        });
     }
 
     override initialize(config: DataSourceConfig<ContextInterface>): void | Promise<void> {
         this.context = config.context;
-        this.cache = config.cache || new InMemoryLRUCache()
+        this.keyValueCache = config.cache;
     }
 
     findById(objectId: ObjectId | string): Promise<T | null> {
@@ -46,7 +79,7 @@ export class MongooseDataSource<T, ContextInterface = {}> extends DataSource<Con
         if (this.options.populate !== undefined) {
             find.populate(this.options.populate);
         }
-        return find.exec();
+        return this.cache(find);
     }
 
     find(filters: FilterQuery<T> = {}, page: number = 1, onPage: number = 10, sort: string | { [key: string]: SortOrder | { $meta: 'textScore' } } | undefined | null = undefined): Promise<T[]> {
@@ -78,6 +111,6 @@ export class MongooseDataSource<T, ContextInterface = {}> extends DataSource<Con
             find.populate(this.options.populate);
         }
 
-        return find.exec();
+        return this.cache(find);
     }
 }
