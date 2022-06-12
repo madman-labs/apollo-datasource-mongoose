@@ -52,6 +52,6 @@
   },
   "description": "Mongoose data source for Apollo server",
   "directories": {
-    "example": "example"
+    "examples": "examples"
   }
 }
