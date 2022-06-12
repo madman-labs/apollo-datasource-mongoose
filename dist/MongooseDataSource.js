@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MongooseDataSource = void 0;
 const apollo_datasource_1 = require("apollo-datasource");
 const mongoose_1 = __importDefault(require("mongoose"));
-const apollo_server_caching_1 = require("apollo-server-caching");
 const apollo_server_errors_1 = require("apollo-server-errors");
 class MongooseDataSource extends apollo_datasource_1.DataSource {
     constructor(model, options = {}) {
@@ -21,18 +20,47 @@ class MongooseDataSource extends apollo_datasource_1.DataSource {
         }
         this.model = model;
         this.options = options;
-        this.cache = new apollo_server_caching_1.InMemoryLRUCache();
+        this.keyValueCache = options.cache;
+        this.keyValueCacheOptions = options.cacheOptions || {};
+    }
+    cache(query, options) {
+        if (!this.keyValueCache) {
+            return query.exec();
+        }
+        const key = JSON.stringify({
+            model: query.model.modelName,
+            populated: query.getPopulatedPaths().join(','),
+            query: query._conditions,
+            fields: query._fields,
+            options: query.options,
+        });
+        return new Promise(async (resolve, reject) => {
+            try {
+                const cacheValue = await this.keyValueCache.get(key);
+                if (cacheValue) {
+                    resolve(cacheValue);
+                }
+                else {
+                    const result = await query.exec();
+                    await this.keyValueCache.set(key, result, options !== null && options !== void 0 ? options : this.keyValueCacheOptions);
+                    resolve(result);
+                }
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
     }
     initialize(config) {
         this.context = config.context;
-        this.cache = config.cache || new apollo_server_caching_1.InMemoryLRUCache();
+        this.keyValueCache = config.cache;
     }
     findById(objectId) {
         const find = this.model.findById(objectId);
         if (this.options.populate !== undefined) {
             find.populate(this.options.populate);
         }
-        return find.exec();
+        return this.cache(find);
     }
     find(filters = {}, page = 1, onPage = 10, sort = undefined) {
         if (!Number.isInteger(page)) {
@@ -56,7 +84,7 @@ class MongooseDataSource extends apollo_datasource_1.DataSource {
         if (this.options.populate !== undefined) {
             find.populate(this.options.populate);
         }
-        return find.exec();
+        return this.cache(find);
     }
 }
 exports.MongooseDataSource = MongooseDataSource;

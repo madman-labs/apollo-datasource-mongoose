@@ -1,5 +1,6 @@
 import mongoose, {Schema} from 'mongoose';
 import {MongooseDataSource} from "../dist";
+import {InMemoryLRUCache} from "apollo-server-caching";
 
 interface CatInterface {
     name: string;
@@ -28,131 +29,240 @@ afterAll(() => {
 });
 
 describe('MongooseDataSource', () => {
-    describe('findById', () => {
-        test('Burek found', async () => {
-            const dataSource = new MongooseDataSource<CatInterface>(Cat);
+    describe('without cache', () => {
+        const dataSource = new MongooseDataSource<CatInterface>(Cat);
 
-            const burek = new Cat({ name: 'Burek' });
-            await burek.save();
+        describe('findById', () => {
+            test('Burek found', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
 
-            const result = await dataSource.findById(burek.id);
+                const result = await dataSource.findById(burek.id);
 
-            expect(result).not.toBeNull();
-            expect(result!.name).toBe('Burek');
+                expect(result).not.toBeNull();
+                expect(result!.name).toBe('Burek');
+            });
+
+            test('Darek not found', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
+
+                const result = await dataSource.findById('507f1f77bcf86cd799439011');
+
+                expect(result).toBeNull();
+            });
         });
 
-        test('Darek not found', async () => {
-            const dataSource = new MongooseDataSource<CatInterface>(Cat);
+        describe('find', () => {
+            test('by name Cezar', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
 
-            const burek = new Cat({ name: 'Burek' });
-            await burek.save();
+                const cezar = new Cat({ name: 'Cezar' });
+                await cezar.save();
 
-            const result = await dataSource.findById('507f1f77bcf86cd799439011');
+                let result = await dataSource.find({
+                    name: 'Cezar',
+                });
+                expect(result.length).toBe(1);
+                expect(result[0].name).toBe('Cezar');
 
-            expect(result).toBeNull();
+                result = await dataSource.find();
+                expect(result.length).toBe(2);
+            });
+
+            test('with empty result', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
+
+                const cezar = new Cat({ name: 'Cezar' });
+                await cezar.save();
+
+                let result = await dataSource.find({
+                    name: 'Darek',
+                });
+                expect(result.length).toBe(0);
+
+            });
+
+            test('with sort ASC', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
+
+                const cezar = new Cat({ name: 'Cezar' });
+                await cezar.save();
+
+                let result = await dataSource.find({}, 1, 10, {
+                    name: 'asc',
+                });
+                expect(result.length).toBe(2);
+                expect(result[0].name).toBe('Burek');
+                expect(result[1].name).toBe('Cezar');
+            });
+
+            test('with sort DESC', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
+
+                const cezar = new Cat({ name: 'Cezar' });
+                await cezar.save();
+
+                let result = await dataSource.find({}, 1, 10, {
+                    name: 'desc'
+                });
+                expect(result.length).toBe(2);
+                expect(result[0].name).toBe('Cezar');
+                expect(result[1].name).toBe('Burek');
+            });
+
+            test ('with limit 1', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
+
+                const cezar = new Cat({ name: 'Cezar' });
+                await cezar.save();
+
+                let result = await dataSource.find({}, 1, 1, {
+                    name: 'desc'
+                });
+                expect(result.length).toBe(1);
+                expect(result[0].name).toBe('Cezar');
+            });
+
+            test ('with skip 1', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
+
+                const cezar = new Cat({ name: 'Cezar' });
+                await cezar.save();
+
+                let result = await dataSource.find({}, 2, 1, {
+                    name: 'desc'
+                });
+                expect(result.length).toBe(1);
+                expect(result[0].name).toBe('Burek');
+            });
         });
     });
 
-    describe('find', () => {
-        test('by name Cezar', async () => {
-            const dataSource = new MongooseDataSource<CatInterface>(Cat);
-
-            const burek = new Cat({ name: 'Burek' });
-            await burek.save();
-
-            const cezar = new Cat({ name: 'Cezar' });
-            await cezar.save();
-
-            let result = await dataSource.find({
-                name: 'Cezar',
-            });
-            expect(result.length).toBe(1);
-            expect(result[0].name).toBe('Cezar');
-
-            result = await dataSource.find();
-            expect(result.length).toBe(2);
+    describe('with cache', () => {
+        const dataSource = new MongooseDataSource<CatInterface>(Cat, {
+            cache: new InMemoryLRUCache(),
+            cacheOptions: {
+                ttl: 5
+            }
         });
 
-        test('with empty result', async () => {
-            const dataSource = new MongooseDataSource<CatInterface>(Cat);
+        describe('findById', () => {
+            test('Burek found', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
 
-            const burek = new Cat({ name: 'Burek' });
-            await burek.save();
+                const result = await dataSource.findById(burek.id);
 
-            const cezar = new Cat({ name: 'Cezar' });
-            await cezar.save();
-
-            let result = await dataSource.find({
-                name: 'Darek',
+                expect(result).not.toBeNull();
+                expect(result!.name).toBe('Burek');
             });
-            expect(result.length).toBe(0);
 
+            test('Darek not found', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
+
+                const result = await dataSource.findById('507f1f77bcf86cd799439011');
+
+                expect(result).toBeNull();
+            });
         });
 
-        test('with sort ASC', async () => {
-            const dataSource = new MongooseDataSource<CatInterface>(Cat);
+        describe('find', () => {
+            test('by name Cezar', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
 
-            const burek = new Cat({ name: 'Burek' });
-            await burek.save();
+                const cezar = new Cat({ name: 'Cezar' });
+                await cezar.save();
 
-            const cezar = new Cat({ name: 'Cezar' });
-            await cezar.save();
+                let result = await dataSource.find({
+                    name: 'Cezar',
+                });
+                expect(result.length).toBe(1);
+                expect(result[0].name).toBe('Cezar');
 
-            let result = await dataSource.find({}, 1, 10, {
-                name: 'asc',
+                result = await dataSource.find();
+                expect(result.length).toBe(2);
             });
-            expect(result.length).toBe(2);
-            expect(result[0].name).toBe('Burek');
-            expect(result[1].name).toBe('Cezar');
-        });
 
-        test('with sort DESC', async () => {
-            const dataSource = new MongooseDataSource<CatInterface>(Cat);
+            test('with empty result', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
 
-            const burek = new Cat({ name: 'Burek' });
-            await burek.save();
+                const cezar = new Cat({ name: 'Cezar' });
+                await cezar.save();
 
-            const cezar = new Cat({ name: 'Cezar' });
-            await cezar.save();
+                let result = await dataSource.find({
+                    name: 'Darek',
+                });
+                expect(result.length).toBe(0);
 
-            let result = await dataSource.find({}, 1, 10, {
-                name: 'desc'
             });
-            expect(result.length).toBe(2);
-            expect(result[0].name).toBe('Cezar');
-            expect(result[1].name).toBe('Burek');
-        });
 
-        test ('with limit 1', async () => {
-            const dataSource = new MongooseDataSource<CatInterface>(Cat);
+            test('with sort ASC', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
 
-            const burek = new Cat({ name: 'Burek' });
-            await burek.save();
+                const cezar = new Cat({ name: 'Cezar' });
+                await cezar.save();
 
-            const cezar = new Cat({ name: 'Cezar' });
-            await cezar.save();
-
-            let result = await dataSource.find({}, 1, 1, {
-                name: 'desc'
+                let result = await dataSource.find({}, 1, 10, {
+                    name: 'asc',
+                });
+                expect(result.length).toBe(2);
+                expect(result[0].name).toBe('Burek');
+                expect(result[1].name).toBe('Cezar');
             });
-            expect(result.length).toBe(1);
-            expect(result[0].name).toBe('Cezar');
-        });
 
-        test ('with skip 1', async () => {
-            const dataSource = new MongooseDataSource<CatInterface>(Cat);
+            test('with sort DESC', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
 
-            const burek = new Cat({ name: 'Burek' });
-            await burek.save();
+                const cezar = new Cat({ name: 'Cezar' });
+                await cezar.save();
 
-            const cezar = new Cat({ name: 'Cezar' });
-            await cezar.save();
-
-            let result = await dataSource.find({}, 2, 1, {
-                name: 'desc'
+                let result = await dataSource.find({}, 1, 10, {
+                    name: 'desc'
+                });
+                expect(result.length).toBe(2);
+                expect(result[0].name).toBe('Cezar');
+                expect(result[1].name).toBe('Burek');
             });
-            expect(result.length).toBe(1);
-            expect(result[0].name).toBe('Burek');
+
+            test ('with limit 1', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
+
+                const cezar = new Cat({ name: 'Cezar' });
+                await cezar.save();
+
+                let result = await dataSource.find({}, 1, 1, {
+                    name: 'desc'
+                });
+                expect(result.length).toBe(1);
+                expect(result[0].name).toBe('Cezar');
+            });
+
+            test ('with skip 1', async () => {
+                const burek = new Cat({ name: 'Burek' });
+                await burek.save();
+
+                const cezar = new Cat({ name: 'Cezar' });
+                await cezar.save();
+
+                let result = await dataSource.find({}, 2, 1, {
+                    name: 'desc'
+                });
+                expect(result.length).toBe(1);
+                expect(result[0].name).toBe('Burek');
+            });
         });
     });
 });

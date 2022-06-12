@@ -13,7 +13,8 @@
 - [x] Basic tests using active mongodb
 - [ ] Mocking mongodb in tests so I can drop dependency on mongodb database
 - [ ] Tests on a live projects to look for any issues
-- [ ] Cache implementation (right now nothing is cached)
+- [x] Cache implementation
+- [ ] Implement mongoose hooks to track cached items
 
 ## Installation
 
@@ -68,3 +69,7 @@ export const dataSources = () => {
     };
 };
 ```
+
+## Cache
+
+Following previous example, you can take advantage of implemented cache. Right now I'm simply 

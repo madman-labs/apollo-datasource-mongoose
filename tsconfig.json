@@ -41,6 +41,7 @@
     "exclude": [
         "node_modules",
         "doc",
+        "example",
         "src/**/*.test.ts",
         "src/*.test.ts"
     ]
