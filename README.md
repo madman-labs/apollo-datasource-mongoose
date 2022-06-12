@@ -8,7 +8,7 @@
 
 ## TODO
 
-- [x] .find() and .findById() with basic parametersgit p
+- [x] .find() and .findById() with basic parameters
 - [x] auto population of the fields
 - [x] Basic tests using active mongodb
 - [ ] Mocking mongodb in tests so I can drop dependency on mongodb database
@@ -19,14 +19,14 @@
 ## Installation
 
 ```
-npm install @madmanlabs/apollo-datasource-mongoose
+npm install @dariuszp/apollo-datasource-mongoose
 ```
 
 ## Usage
 
 ```
 import mongoose, {Schema} from 'mongoose';
-import {MongooseDataSource} from '@madmanlabs/apollo-datasource-mongoose';
+import {MongooseDataSource} from '@dariuszp/apollo-datasource-mongoose';
 
 interface CatInterface {
     name: string;
@@ -47,7 +47,7 @@ Creating your own data source using inheritance:
 
 ```
 import mongoose, {Schema} from 'mongoose';
-import {MongooseDataSource} from '@madmanlabs/apollo-datasource-mongoose';
+import {MongooseDataSource} from '@dariuszp/apollo-datasource-mongoose';
 
 interface CatInterface {
     name: string;
@@ -72,11 +72,17 @@ export const dataSources = () => {
 
 ## Cache
 
-Following previous example, you can take advantage of implemented cache. Right now I'm simply caching queries without tracking individual documents. There is a plan of using mongoose hooks to track changes in individual documents but I would be against that in distributed systems unless you implement global cache.
+Following previous example, you can take advantage of implemented cache. 
+Right now I'm simply caching queries without tracking individual documents.
+There is a plan to track individual documents using and updating them in cache in the future.
+
+You can take advantage of **this.cache()** method. Pass mongoose query to it and data source will try to create a cache for it.
+
+You can also use cache directly by calling **this.keyValueCache**
 
 ```
 import mongoose, {Schema} from 'mongoose';
-import {MongooseDataSource} from '@madmanlabs/apollo-datasource-mongoose';
+import {MongooseDataSource} from '@dariuszp/apollo-datasource-mongoose';
 import {InMemoryLRUCache} from "apollo-server-caching";
 
 interface CatInterface {
@@ -89,7 +95,40 @@ const Cat = mongoose.model<CatInterface>('Cat', new Schema<CatInterface>({
 
 class CatDataSource extends MongooseDataSource<CatInterface> {
     findByName(name: string) {
-        return this.model.find({ name });
+        return this.find({ name });
+    }
+
+    findCatsStartingWithLetterC() {
+        const query = this.model.find({
+            name: {
+                $regex: /^c.*/i
+            }
+        });
+        // Using simply build-in cache method that cache using query
+        return this.cache(query);
+    }
+
+    findByIdWithCustomCache(id: string): Promise<CatInterface | null> {
+        return new Promise<CatInterface | null>(async (resolve, reject) => {
+            try {
+                // Querying cache using document id
+                const cached = await this.keyValueCache!.get(id) as CatInterface | undefined;
+                if (cached) {
+                    resolve(cached);
+                } else {
+                    const item = await this.model.findById(id);
+                    if (!item) {
+                        resolve(null);
+                    } else {
+                        // Saving in cache object using document id
+                        await this.keyValueCache!.set(item.id, item.toObject());
+                        resolve(item.toObject());
+                    }
+                }
+            } catch (e) {
+                reject(e);
+            }
+        });
     }
 }
 
